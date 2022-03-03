@@ -9,9 +9,9 @@ export const appSlice = createSlice({
     name: 'counter',
     initialState,
     reducers: {
-        setAppErrorAC(state, action: PayloadAction<{error: string | null}>){state.error = action.payload.error},
-        setAppStatusAC(state, action: PayloadAction<{status: RequestStatusType}>){state.status = action.payload.status},
-        setIsInitializedAC(state, action: PayloadAction<{value: boolean}>){state.isInitialized = action.payload.value},
+        setAppErrorAC(state, action: PayloadAction<string | null>){state.error = action.payload},
+        setAppStatusAC(state, action: PayloadAction<RequestStatusType>){state.status = action.payload},
+        setIsInitializedAC(state, action: PayloadAction<boolean>){state.isInitialized = action.payload},
     },
 })
 

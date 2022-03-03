@@ -1,14 +1,14 @@
 import React, {useCallback, useEffect} from 'react'
-import { AddItemForm } from '../../../components/AddItemForm/AddItemForm'
-import { EditableSpan } from '../../../components/EditableSpan/EditableSpan'
+import {AddItemForm} from '../../../components/AddItemForm/AddItemForm'
+import {EditableSpan} from '../../../components/EditableSpan/EditableSpan'
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
-import { Delete } from '@mui/icons-material';
-import { Task } from './Task/Task'
-import { TaskStatuses, TaskType } from '../../../api/todolists-api'
-import { FilterValuesType, TodolistDomainType } from '../todolists-reducer'
+import {Delete} from '@mui/icons-material';
+import {Task} from './Task/Task'
+import {TaskStatuses, TaskType} from '../../../api/todolists-api'
+import {FilterValuesType, TodolistDomainType} from '../todolists-reducer'
 import {useDispatch} from 'react-redux'
-import { fetchTasksTC } from '../tasks-reducer'
+import {fetchTasksTC} from '../tasks-reducer'
 
 type PropsType = {
     todolist: TodolistDomainType
@@ -23,14 +23,12 @@ type PropsType = {
     demo?: boolean
 }
 
-export const Todolist = ({demo = false, ...props}: PropsType) => {
-
+export const Todolist = React.memo(({demo = false, ...props}: PropsType) => {
     let tasksForTodolist = props.tasks ? props.tasks : []
 
     const dispatch = useDispatch()
 
     useEffect(() => {
-        debugger
         const thunk = fetchTasksTC(props.todolist.id)
         dispatch(thunk)
     }, [])
@@ -56,8 +54,6 @@ export const Todolist = ({demo = false, ...props}: PropsType) => {
     if (props.todolist.filter === 'completed') {
         tasksForTodolist = props.tasks.filter(t => t.status === TaskStatuses.Completed)
     }
-
-    debugger
 
     return <div>
         <h3><EditableSpan value={props.todolist.title} onChange={changeTodolistTitle}/>
@@ -93,6 +89,6 @@ export const Todolist = ({demo = false, ...props}: PropsType) => {
             </Button>
         </div>
     </div>
-}
+})
 
 
