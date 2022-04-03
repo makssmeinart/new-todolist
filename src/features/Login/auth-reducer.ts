@@ -1,88 +1,107 @@
 import {
-    authAPI,
-    LoginParamsType,
-    ServerResultCodeResponse
+  authAPI, FieldsErrorsType,
+  LoginParamsType,
+  ServerResultCodeResponse,
 } from "../../api/todolists-api";
-import {Dispatch} from "redux";
+import { Dispatch } from "redux";
+import { setAppStatusAC, setIsInitializedAC } from "../../app/app-reducer";
 import {
-    setAppStatusAC,
-    setIsInitializedAC
-} from "../../app/app-reducer";
-import {
-    handleServerAppError,
-    handleServerNetworkError
+  handleServerAppError,
+  handleServerNetworkError,
 } from "../../utils/error-utils";
-import {createSlice, PayloadAction} from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { AxiosError } from "axios";
 
-const initState = {
-    isLoggedIn: false,
-}
-const slice = createSlice({
-    name: 'auth',
-    initialState: initState,
-    reducers: {
-        setIsLoggedInAC(state, action: PayloadAction<{ value: boolean }>) {
-            state.isLoggedIn = action.payload.value
-        }
+export const loginTC = createAsyncThunk<
+  { isLoggedIn: boolean },
+  LoginParamsType,
+  { rejectValue: {errors: Array<string>, fieldsError?: FieldsErrorsType}}
+>("auth/login", async (data: LoginParamsType, thunkApi) => {
+  const { email, password, rememberMe, captcha } = data;
+
+  thunkApi.dispatch(setAppStatusAC("loading"));
+
+  try {
+    const res = await authAPI.login(email, password, rememberMe, captcha);
+    if (res.data.resultCode === ServerResultCodeResponse.success) {
+      thunkApi.dispatch(setAppStatusAC("succeeded"));
+      return { isLoggedIn: true };
+    } else {
+      handleServerAppError(res.data, thunkApi.dispatch);
+      debugger;
+      return thunkApi.rejectWithValue({
+        errors: res.data.messages,
+        fieldsError: res.data.fieldsErrors,
+      });
     }
-})
+  } catch (err: any) {
+    const error: AxiosError = err;
+    handleServerNetworkError(error, thunkApi.dispatch);
+    return thunkApi.rejectWithValue({
+      errors: [error.message],
+      fieldsError: undefined,
+    });
+  }
+});
 
-export const authReducer = slice.reducer
-
-// action creators
-
-export const setIsLoggedInAC = slice.actions.setIsLoggedInAC
-
-// thunk
-
-export const loginTC = (data: LoginParamsType) => (dispatch: Dispatch) => {
-    const {email, password, rememberMe, captcha} = data
-
-    dispatch(setAppStatusAC("loading"))
-
-    authAPI.login(email, password, rememberMe, captcha)
-        .then(res => {
-            if (res.data.resultCode === ServerResultCodeResponse.success) {
-                dispatch(setIsLoggedInAC({value: true}))
-                dispatch(setAppStatusAC("succeeded"))
-            } else {
-                handleServerAppError(res.data, dispatch)
-            }
-        })
-        .catch(err => {
-            handleServerNetworkError(err, dispatch)
-        })
-}
 export const logoutTC = () => (dispatch: Dispatch) => {
-    dispatch(setAppStatusAC("loading"))
+  dispatch(setAppStatusAC("loading"));
 
-    authAPI.logout()
-        .then(res => {
-            if (res.data.resultCode === 0) {
-                dispatch(setIsLoggedInAC({value: false}))
-                dispatch(setAppStatusAC("succeeded"))
-            } else {
-                handleServerAppError(res.data, dispatch)
-            }
-        })
-        .catch(err => {
-            handleServerNetworkError(err, dispatch)
-        })
-}
+  authAPI
+    .logout()
+    .then((res) => {
+      if (res.data.resultCode === 0) {
+        dispatch(setAppStatusAC("succeeded"));
+        dispatch(setIsLoggedInAC({ isLoggedIn: false }));
+      } else {
+        handleServerAppError(res.data, dispatch);
+      }
+    })
+    .catch((err) => {
+      handleServerNetworkError(err, dispatch);
+    });
+};
+
 export const initializeAppTC = () => (dispatch: Dispatch) => {
+  authAPI
+    .me()
+    .then((res) => {
+      if (res.data.resultCode === 0) {
+        dispatch(setIsLoggedInAC({ isLoggedIn: true }));
+      } else {
+        handleServerAppError(res.data, dispatch);
+      }
+    })
+    .catch((err) => {
+      handleServerNetworkError(err, dispatch);
+    })
+    .finally(() => {
+      dispatch(setIsInitializedAC(true));
+    });
+};
 
-    authAPI.me()
-        .then(res => {
-            if (res.data.resultCode === 0) {
-                dispatch(setIsLoggedInAC({value: true}))
-            } else {
-                handleServerAppError(res.data, dispatch)
-            }
-        })
-        .catch(err => {
-            handleServerNetworkError(err, dispatch)
-        })
-        .finally(() => {
-            dispatch(setIsInitializedAC(true))
-        })
-}
+const slice = createSlice({
+  name: "auth",
+  initialState: {
+    isLoggedIn: false,
+  },
+  reducers: {
+    setIsLoggedInAC: (
+      state,
+      action: PayloadAction<{ isLoggedIn: boolean }>
+    ) => {
+      state.isLoggedIn = action.payload!.isLoggedIn;
+    },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(loginTC.fulfilled, (state, action) => {
+      state.isLoggedIn = action.payload.isLoggedIn;
+    });
+  },
+});
+
+// Action Creators
+
+export const setIsLoggedInAC = slice.actions.setIsLoggedInAC;
+
+export const authReducer = slice.reducer;
