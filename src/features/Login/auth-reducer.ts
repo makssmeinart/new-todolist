@@ -55,10 +55,12 @@ export const logoutTC = createAsyncThunk(
         return;
       } else {
         handleServerAppError(res.data, thunkApi.dispatch);
+        return thunkApi.rejectWithValue({});
       }
     } catch (err: any) {
       const error: AxiosError = err;
       handleServerNetworkError(error, thunkApi.dispatch);
+      return thunkApi.rejectWithValue({});
     }
   }
 );
